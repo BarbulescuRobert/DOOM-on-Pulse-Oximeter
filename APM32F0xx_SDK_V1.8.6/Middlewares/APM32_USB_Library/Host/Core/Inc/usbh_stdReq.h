@@ -1,0 +1,103 @@
+/*!
+ * @file        usbh_stdReq.h
+ *
+ * @brief       USB standard request process
+ *
+ * @attention
+ *
+ *  Copyright (C) 2023-2024 Geehy Semiconductor
+ *
+ *  You may not use this file except in compliance with the
+ *  GEEHY COPYRIGHT NOTICE (GEEHY SOFTWARE PACKAGE LICENSE).
+ *
+ *  The program is only for reference, which is distributed in the hope
+ *  that it will be useful and instructional for customers to develop
+ *  their software. Unless required by applicable law or agreed to in
+ *  writing, the program is distributed on an "AS IS" BASIS, WITHOUT
+ *  ANY WARRANTY OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the GEEHY SOFTWARE PACKAGE LICENSE for the governing permissions
+ *  and limitations under the License.
+ */
+
+/* Define to prevent recursive inclusion */
+#ifndef USBH_STDREQ_H
+#define USBH_STDREQ_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Includes */
+#include "usbh_config.h"
+
+/** @addtogroup APM32_USB_Library
+  @{
+  */
+
+/** @addtogroup USBH_Core
+  @{
+  */
+
+/** @defgroup USBH_Core_Macros Macros
+  @{
+*/
+
+/* Only use for internal USBH library */
+
+#define USBH_SETUP_PACKET_SIZE          8
+#define USBH_ReadConfigurationItfNum(usbInfo)  \
+        usbInfo->devInfo.configuration.bNumInterfaces
+
+#define USBH_ReadInterfaceClass(usbInfo, itfIndex) \
+        usbInfo->devInfo.configuration.interface[itfIndex].bInterfaceClass
+
+#define USBH_ReadInterfaceSubClass(usbInfo, itfIndex) \
+        usbInfo->devInfo.configuration.interface[itfIndex].bInterfaceSubClass
+
+#define USBH_ReadInterfaceProtocol(usbInfo, itfIndex) \
+        usbInfo->devInfo.configuration.interface[itfIndex].bInterfaceProtocol
+
+#define USBH_ReadInterfaceEpNum(usbInfo, itfIndex) \
+        usbInfo->devInfo.configuration.interface[itfIndex].bNumEndpoints
+
+#define USBH_ReadEndpointAddress(usbInfo, itfIndex, epIndex) \
+        usbInfo->devInfo.configuration.interface[itfIndex].endpoint[epIndex].bEndpointAddress
+
+#define USBH_ReadEndpointMPS(usbInfo, itfIndex, epIndex) \
+        ((uint16_t)usbInfo->devInfo.configuration.interface[itfIndex].endpoint[epIndex].wMaxPacketSize[0] | \
+        (uint16_t)usbInfo->devInfo.configuration.interface[itfIndex].endpoint[epIndex].wMaxPacketSize[1] << 8)
+
+#define USBH_ReadEndpointInterval(usbInfo, itfIndex, epIndex) \
+        usbInfo->devInfo.configuration.interface[itfIndex].endpoint[epIndex].bInterval
+
+/**@} end of group USBH_Core_Macros*/
+
+/** @defgroup USBH_Core_Functions Functions
+  @{
+  */
+
+USBH_STA_T USBH_GetDevDesc(USBH_INFO_T* usbInfo, uint16_t desLength);
+USBH_STA_T USBH_SetAddress(USBH_INFO_T* usbInfo, uint8_t address);
+USBH_STA_T USBH_GetCfgDesc(USBH_INFO_T* usbInfo, uint16_t desLength);
+USBH_STA_T USBH_GetStringDesc(USBH_INFO_T* usbInfo, uint8_t stringIndex, \
+                              uint8_t* buffer, uint16_t desLength);
+
+USBH_STA_T USBH_REQ_GetDescriptor(USBH_INFO_T* usbInfo, uint8_t reqType, \
+                                  uint16_t desType, uint8_t* buffer, uint16_t length);
+
+USBH_STA_T USBH_SetConfiguration(USBH_INFO_T* usbInfo, uint16_t configuration);
+USBH_STA_T USBH_SetInterface(USBH_INFO_T* usbInfo, uint8_t epNum, uint8_t interface);
+USBH_STA_T USBH_SetFeature(USBH_INFO_T* usbInfo, uint8_t feature);
+USBH_STA_T USBH_ClearFeature(USBH_INFO_T* usbInfo, uint8_t epNum);
+
+USBH_STA_T USBH_REQ_CtrlXferHandler(USBH_INFO_T* usbInfo, uint8_t* buffer, uint16_t length);
+
+/**@} end of group USBH_Core_Functions */
+/**@} end of group USBH_Core */
+/**@} end of group APM32_USB_Library */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* USBH_STDREQ_H */

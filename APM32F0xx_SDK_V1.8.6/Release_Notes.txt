@@ -1,0 +1,61 @@
+Release Notes for APM32F0xx SDK
+
+Update History
+V1.0 / 02-09-2020
+First Release version of APM32F0xx SDK.
+
+V1.1 / 02-09-2020
+Update pack file.
+
+V1.2 / 03-11-2020
+Update Example file.
+Update pack file.
+
+V1.3 / 30-11-2020
+Add APM32F07x support files
+
+V1.4 / 26-04-2021
+Add APM32F091 support files
+
+V1.5 / 01-07-2021
+Update Library for V1.0.1.
+Update pack file for SVD.
+
+V1.6 / 21-02-2022
+Update Library for V1.0.2.
+Update Pack for V1.0.7.
+Add IAR Support.
+Add USB_Device_Lib and Example.
+Add TSC_Device_Lib and Example.
+Add ADC_TMRTrigger and I2S_TwoBoards Example.
+
+V1.7 / 20-09-2022
+Update Library for V1.0.3.
+Update Pack for V1.0.8.
+Add Eclipse Support.
+Add Other Example.
+
+V1.8.0 / 10-07-2025
+Update Library for V1.0.4.
+Update Pack for V1.0.9.
+Add APM32_USB_Library.
+Fix some error codes.
+
+V1.8.1 / 03-09-2025
+Fix some error codes.
+
+V1.8.2 / 26-09-2025
+Fix some error codes.
+
+V1.8.3 / 10-10-2025
+Fix some error codes.
+
+V1.8.4 / 31-10-2025
+Update Pack for V1.1.1.
+
+V1.8.5 / 24-11-2025
+Fix some error codes.
+
+V1.8.6 / 06-01-2026
+Update Pack for V1.1.3.
+
