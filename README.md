@@ -10,7 +10,7 @@
 
 <video width="320" height="240" controls>
 
-&#x20; <source src="video.mov" type="video/mp4">
+&#x20; <source src="./img/video.mp4" type="video/mp4">
 
 </video>
 
@@ -72,7 +72,7 @@ This is the pinout for the SSD1306 display.
 
 ### Visual tracing \& Continuity testing
 
-Since the OLED looks like the AliExpress modules you can buy cheaply, I started looking at raw displays that fitted the same pattern. I stumbled upon [this](%5Btext%5D%28https://www.winstar.com.tw/uploads/files/de98519ca528b9d3bc173cfe8bc99c7d.pdf%29) datasheet which looked the same and has the same dimensions, so I went probing around to establish whether it has the same pinout.
+Since the OLED looks like the AliExpress modules you can buy cheaply, I started looking at raw displays that fitted the same pattern. I stumbled upon [this](%25255Btext%25255D%252528https://www.winstar.com.tw/uploads/files/de98519ca528b9d3bc173cfe8bc99c7d.pdf%252529) datasheet which looked the same and has the same dimensions, so I went probing around to establish whether it has the same pinout.
 
 First step was to poke at it with bright lights to see the traces on this 2-layer PCB.
 
@@ -125,11 +125,11 @@ After wiping the original firmware (this is the no-going-back step), I used J-Li
 |`D/C#`|PB15 via 100 Ω|command/data select|
 |`SCLK`|PB13|bit-banged clock|
 |`SDIN/MOSI`|PB12|bit-banged data|
-|`PWR\_ENABLE`|PB14, active HIGH|**the booby-trap; see below**|
+|`PWR\\\\\\\_ENABLE`|PB14, active HIGH|**the booby-trap; see below**|
 
 ### The booby-trap: PB14
 
-The crucial pin — and the one that ate days of my bring-up time — is `PWR\_ENABLE` on PB14. Nothing about the schematic or the flex cable suggests its existence. It is an MCU GPIO that gates the OLED power rail through a small MOSFET on the board. If PB14 is low, the OLED is electrically dead no matter how perfect the SPI traffic is.
+The crucial pin — and the one that ate days of my bring-up time — is `PWR\\\\\\\_ENABLE` on PB14. Nothing about the schematic or the flex cable suggests its existence. It is an MCU GPIO that gates the OLED power rail through a small MOSFET on the board. If PB14 is low, the OLED is electrically dead no matter how perfect the SPI traffic is.
 
 After every standard SSD1306 init sequence I tried failed — including `0xA5`, the "all pixels on" command, which bypasses the framebuffer entirely — I had to admit the screen wasn't even powered. The MCU has 30-ish GPIOs, and rather than probe each one with a multimeter, I cheated. I modified the firmware to drive every GPIO HIGH at once, confirmed the screen lit up, then used the J-Link debugger to do a literal binary search: knock out half the pins, flash, see if the screen went dark, repeat. Five iterations later (`log₂(30) ≈ 5`), PB14 was the survivor.
 
@@ -144,12 +144,12 @@ There is a second subtle trap I want to flag, because it cost me hours and I hav
 The fix is to pre-load the output register *before* enabling the output driver:
 
 ```c
-GPIO\_BSRR(GPIOB\_BASE) = (1u << OLED\_PIN\_SCLK);  // ODR\[13] = 1, SCLK will idle HIGH
-GPIO\_BSRR(GPIOB\_BASE) = (1u << OLED\_PIN\_DC);    // ODR\[15] = 1, DC will idle HIGH
+GPIO\\\\\\\_BSRR(GPIOB\\\\\\\_BASE) = (1u << OLED\\\\\\\_PIN\\\\\\\_SCLK);  // ODR\\\\\\\[13] = 1, SCLK will idle HIGH
+GPIO\\\\\\\_BSRR(GPIOB\\\\\\\_BASE) = (1u << OLED\\\\\\\_PIN\\\\\\\_DC);    // ODR\\\\\\\[15] = 1, DC will idle HIGH
 
-gpio\_output\_pushpull(GPIOB\_BASE, OLED\_PIN\_MOSI); // starts LOW
-gpio\_output\_pushpull(GPIOB\_BASE, OLED\_PIN\_SCLK); // starts HIGH (no glitch)
-gpio\_output\_pushpull(GPIOB\_BASE, OLED\_PIN\_DC);   // starts HIGH (no glitch)
+gpio\\\\\\\_output\\\\\\\_pushpull(GPIOB\\\\\\\_BASE, OLED\\\\\\\_PIN\\\\\\\_MOSI); // starts LOW
+gpio\\\\\\\_output\\\\\\\_pushpull(GPIOB\\\\\\\_BASE, OLED\\\\\\\_PIN\\\\\\\_SCLK); // starts HIGH (no glitch)
+gpio\\\\\\\_output\\\\\\\_pushpull(GPIOB\\\\\\\_BASE, OLED\\\\\\\_PIN\\\\\\\_DC);   // starts HIGH (no glitch)
 ```
 
 Writing `BSRR` while the pin is still configured as an input doesn't move the pad — it just primes `ODR`. When the pin is then switched to push-pull output, it drives the level that was already loaded, and the controller never sees a stray edge.
@@ -168,59 +168,63 @@ The build:
 * Hand-written startup assembly with the Thumb-bit fix:
 
 ```asm
-  .thumb\_func
-  .type Reset\_Handler, %function
-  Reset\_Handler:
+  .thumb\\\\\\\_func
+  .type Reset\\\\\\\_Handler, %function
+  Reset\\\\\\\_Handler:
   ```
 
-  Without `.thumb\_func`, the linker emits a reset vector with the Thumb bit clear, the Cortex-M0 immediately faults on entry, and J-Link prints the gloriously cryptic `T-bit of XPSR is 0 but should be 1`. If you see that error, this is almost certainly why.
+Without `.thumb\\\\\\\_func`, the linker emits a reset vector with the Thumb bit clear, the Cortex-M0 immediately faults on entry, and J-Link prints the gloriously cryptic `T-bit of XPSR is 0 but should be 1`. If you see that error, this is almost certainly why.
 
 * Flashing is done via SEGGER J-Link Commander over SWD:
 
-  ```
+```
   connect
   erase
-  loadfile build/pulseox\_doom\_oled.hex
+  loadfile build/pulseox\\\\\\\_doom\\\\\\\_oled.hex
   r ; g
   ```
 
-  *Checkerboard shenanigans*
+*Checkerboard shenanigans*
 
-  <img src="./img/img15.jpeg" alt="drawing" height="500"/>
+<img src="./img/img15.jpeg" alt="drawing" height="500"/>
 
 
 
-  ### Cranking up the clock
+### Cranking up the clock
 
-  The OLED bring-up worked fine at the default 8 MHz HSI, but DOOM playback wanted more headroom. I added a short routine in `system\_apm32f030.c` that brings the chip up to 48 MHz:
+The OLED bring-up worked fine at the default 8 MHz HSI, but DOOM playback wanted more headroom. I added a short routine in `system\\\\\\\_apm32f030.c` that brings the chip up to 48 MHz:
+
+```
+HSI (8 MHz) -> /2 -> x12 (PLL) = 48 MHz
+
+  HSI (8 MHz) -> /2 -> x12 (PLL) = 48 MHz
 
   ```
-HSI (8 MHz) -> /2 -> x12 (PLL) = 48 MHz
+
+The sequence is as follows:
+
+\* The flash wait state must be raised to 1 \*before\* enabling the PLL.
+\* The PLL must be configured \*before\* it is switched in.
+\* The `SCLKSWSTS` readback must be polled to confirm the system clock has actually moved over.
+
+Skip any of those steps and the chip silently runs at the wrong frequency, or hangs. I learned each of these lessons the slow way.
+
+\\---
+
+## Step 3 — Writing the SSD1306 driver
+
+With pins identified and the clock running, the OLED driver itself is small and unsurprising. Here is what's in it:
+
+\* `spi\\\\\\\_write\\\\\\\_byte` shifts MSB-first, toggling SCLK with one-NOP delays between edges.
+\* `oled\\\\\\\_cmd` drops `D/C#` low, sends one byte, restores `D/C#` high.
+\* `oled\\\\\\\_data` keeps `D/C#` high and streams a buffer.
+\* `OLED\\\\\\\_Update` walks the 8 vertical pages, sending the page-address command (`B0|page`), the column-address commands (`0x00|low`, `0x10|high`), then 128 data bytes per page.
+
+The init sequence I send is the canonical SSD1306 power-up. Nothing exotic:
+
 ```
 
-  The sequence is as follows:
-
-* The flash wait state must be raised to 1 *before* enabling the PLL.
-* The PLL must be configured *before* it is switched in.
-* The `SCLKSWSTS` readback must be polled to confirm the system clock has actually moved over.
-
-  Skip any of those steps and the chip silently runs at the wrong frequency, or hangs. I learned each of these lessons the slow way.
-
-  \---
-
-  ## Step 3 — Writing the SSD1306 driver
-
-  With pins identified and the clock running, the OLED driver itself is small and unsurprising. Here is what's in it:
-
-* `spi\_write\_byte` shifts MSB-first, toggling SCLK with one-NOP delays between edges.
-* `oled\_cmd` drops `D/C#` low, sends one byte, restores `D/C#` high.
-* `oled\_data` keeps `D/C#` high and streams a buffer.
-* `OLED\_Update` walks the 8 vertical pages, sending the page-address command (`B0|page`), the column-address commands (`0x00|low`, `0x10|high`), then 128 data bytes per page.
-
-  The init sequence I send is the canonical SSD1306 power-up. Nothing exotic:
-
-  ```
-AE                  display off
+  AE                  display off
 D5 80               oscillator
 A8 3F               multiplex 1/64
 D3 00               display offset 0
@@ -234,33 +238,36 @@ A4                  display follows RAM
 A6                  normal (non-inverted)
 2E                  scroll off
 AF                  display on
-```
-
-  The line that turns the screen from black to legible is `0x8D 0x14`. The internal charge pump generates the \~7 V the OLED matrix needs; without it the panel is correctly clocked but the pixels never reach threshold. If you ever bring up an SSD1306 and see "all the right traffic" on a logic analyzer but a dead screen, this is a likely suspect.
-
-  \---
-
-  ## Step 4 — The video pipeline
-
-  My original goal was to render DOOM live on the device. I quietly downgraded that ambition the moment I measured the SPI throughput: a bit-banged SCLK at 48 MHz pushes one OLED frame in roughly 30–40 ms, and there is approximately zero CPU left over for an actual game engine. So I pivoted: **render DOOM on a real machine, then play it back on the oximeter**.
-
-  <img src="./img/img16.png" alt="drawing" height="400"/>
-
-  The pipeline lives in `tools/video\_to\_frames.py`. It is a single script that goes from MP4 to a self-contained C file embedded in firmware. It has six stages.
-
-  ### Stage 1 — Frame extraction
-
-  I invoke `ffmpeg` with a downscale + framerate filter:
 
   ```
-ffmpeg -i doom\_gameplay.mp4 -vf "fps=5,scale=128:64:flags=lanczos" frame\_%05d.png
+
+The line that turns the screen from black to legible is `0x8D 0x14`. The internal charge pump generates the \\\~7 V the OLED matrix needs; without it the panel is correctly clocked but the pixels never reach threshold. If you ever bring up an SSD1306 and see "all the right traffic" on a logic analyzer but a dead screen, this is a likely suspect.
+
+\\---
+
+## Step 4 — The video pipeline
+
+My original goal was to render DOOM live on the device. I quietly downgraded that ambition the moment I measured the SPI throughput: a bit-banged SCLK at 48 MHz pushes one OLED frame in roughly 30–40 ms, and there is approximately zero CPU left over for an actual game engine. So I pivoted: \*\*render DOOM on a real machine, then play it back on the oximeter\*\*.
+
+<img src="./img/img16.png" alt="drawing" height="400"/>
+
+The pipeline lives in `tools/video\\\\\\\_to\\\\\\\_frames.py`. It is a single script that goes from MP4 to a self-contained C file embedded in firmware. It has six stages.
+
+### Stage 1 — Frame extraction
+
+I invoke `ffmpeg` with a downscale + framerate filter:
+
 ```
 
-  The source is 640×360 at 30 fps. The OLED is 128×64 at whatever framerate the flash budget will allow. I use Lanczos rescaling because it preserves more edge detail than bilinear, and DOOM is mostly edges.
+  ffmpeg -i doom\\\_gameplay.mp4 -vf "fps=5,scale=128:64:flags=lanczos" frame\\\_%05d.png
 
-  ### Stage 2 — Dithering to 1 bit per pixel
+  ```
 
-  The OLED has no greyscale. Every pixel is on or off. I support three dither modes:
+The source is 640×360 at 30 fps. The OLED is 128×64 at whatever framerate the flash budget will allow. I use Lanczos rescaling because it preserves more edge detail than bilinear, and DOOM is mostly edges.
+
+### Stage 2 — Dithering to 1 bit per pixel
+
+The OLED has no greyscale. Every pixel is on or off. I support three dither modes:
 
 |Mode|Quality|Compresses to|
 |-|-|-|
@@ -271,11 +278,11 @@ ffmpeg -i doom\_gameplay.mp4 -vf "fps=5,scale=128:64:flags=lanczos" frame\_%05d.
 I settled on Bayer for this project because it's the sweet spot. A 4×4 Bayer matrix is tiled across the frame:
 
 ```python
-\_BAYER\_4 = np.array(\[
-    \[ 0,  8,  2, 10],
-    \[12,  4, 14,  6],
-    \[ 3, 11,  1,  9],
-    \[15,  7, 13,  5],
+\\\\\\\_BAYER\\\\\\\_4 = np.array(\\\\\\\[
+    \\\\\\\[ 0,  8,  2, 10],
+    \\\\\\\[12,  4, 14,  6],
+    \\\\\\\[ 3, 11,  1,  9],
+    \\\\\\\[15,  7, 13,  5],
 ]) / 16.0
 ```
 
@@ -285,16 +292,16 @@ Each pixel's grey value is compared against its position in the Bayer tile. I ad
 
 This is the non-obvious step, and I want to spend a paragraph on it because it changes everything downstream.
 
-The SSD1306 stores its framebuffer as 8 horizontal "pages", each 128 bytes wide. One byte = 8 *vertical* pixels in a column. The natural order to emit, page-major, is `page0\_col0, page0\_col1, ..., page0\_col127, page1\_col0, ...`.
+The SSD1306 stores its framebuffer as 8 horizontal "pages", each 128 bytes wide. One byte = 8 *vertical* pixels in a column. The natural order to emit, page-major, is `page0\\\\\\\_col0, page0\\\\\\\_col1, ..., page0\\\\\\\_col127, page1\\\\\\\_col0, ...`.
 
 But Bayer dithering produces *vertical* coherence: a single column of the source frame goes through a single column of the Bayer tile, and so within one column of the OLED, all 8 pages tend to share the same threshold and produce identical or near-identical bytes.
 
-So I emit in **column-major** order instead: `col0\_page0..7, col1\_page0..7, ..., col127\_page0..7`. Now the redundant bytes are adjacent in the stream, which matters enormously for the next stage.
+So I emit in **column-major** order instead: `col0\\\\\\\_page0..7, col1\\\\\\\_page0..7, ..., col127\\\\\\\_page0..7`. Now the redundant bytes are adjacent in the stream, which matters enormously for the next stage.
 
 ```python
-buf = bytearray(BYTES\_PER\_FRAME)
+buf = bytearray(BYTES\\\\\\\_PER\\\\\\\_FRAME)
 for col in range(W):
-    buf\[col\*8 : col\*8+8] = page\_bytes\[:, col].tobytes()
+    buf\\\\\\\[col\\\\\\\*8 : col\\\\\\\*8+8] = page\\\\\\\_bytes\\\\\\\[:, col].tobytes()
 ```
 
 The firmware decompressor knows about this transposition and rearranges back into page-major layout while writing the framebuffer (see Stage 5).
@@ -304,13 +311,13 @@ The firmware decompressor knows about this transposition and rearranges back int
 A trivial run-length encoder, two bytes per run: `(count, value)`. Counts cap at 255.
 
 ```python
-def rle\_compress(data):
+def rle\\\\\\\_compress(data):
     out = bytearray()
     i = 0
     while i < len(data):
-        val = data\[i]
+        val = data\\\\\\\[i]
         run = 1
-        while i + run < len(data) and data\[i + run] == val and run < 255:
+        while i + run < len(data) and data\\\\\\\[i + run] == val and run < 255:
             run += 1
         out.append(run)
         out.append(val)
@@ -323,82 +330,87 @@ Why RLE instead of a real compressor? Two reasons:
 1. The decompressor must run on a Cortex-M0 with no LZ table memory. I have \~7 KB of RAM after the framebuffer; that is not enough room for an LZ window of meaningful size.
 2. The column-major Bayer output has long runs of identical bytes in dark and bright regions — exactly the workload RLE excels at.
 
-A typical raw OLED frame is 1024 bytes. After Bayer + column-major + RLE, mid-complexity DOOM frames land around 600–900 bytes; bright sky/wall regions can shrink under 200 bytes; the worst-case noisy frame is about 1.0–1.05× the raw size, capped at the budget.
+   A typical raw OLED frame is 1024 bytes. After Bayer + column-major + RLE, mid-complexity DOOM frames land around 600–900 bytes; bright sky/wall regions can shrink under 200 bytes; the worst-case noisy frame is about 1.0–1.05× the raw size, capped at the budget.
 
-### Stage 5 — C emission
+   ### Stage 5 — C emission
 
-The script writes a single self-contained `src/doom\_frames.c` containing:
+   The script writes a single self-contained `src/doom\\\\\\\_frames.c` containing:
 
-* `frame\_data\[]` — concatenated RLE bytes for every frame
-* `frame\_offsets\[]` — where each frame starts
-* `frame\_lengths\[]` — how long each frame is
-* `DOOM\_FRAME\_COUNT` and `DOOM\_FPS` constants
-* A `DoomFrames\_Blit(uint32\_t idx)` function that decompresses one frame straight into the OLED framebuffer, transposing column-major back to page-major as it goes
+* `frame\\\\\\\_data\\\\\\\[]` — concatenated RLE bytes for every frame
+* `frame\\\\\\\_offsets\\\\\\\[]` — where each frame starts
+* `frame\\\\\\\_lengths\\\\\\\[]` — how long each frame is
+* `DOOM\\\\\\\_FRAME\\\\\\\_COUNT` and `DOOM\\\\\\\_FPS` constants
+* A `DoomFrames\\\\\\\_Blit(uint32\\\\\\\_t idx)` function that decompresses one frame straight into the OLED framebuffer, transposing column-major back to page-major as it goes
 
-The decompressor is the entire point and it's small enough to quote in full:
+  The decompressor is the entire point and it's small enough to quote in full:
 
-```c
-void DoomFrames\_Blit(uint32\_t idx)
+  ```c
+void DoomFrames\\\\\\\_Blit(uint32\\\\\\\_t idx)
+
+  void DoomFrames\\\_Blit(uint32\\\_t idx)
 {
-    const uint8\_t \*src = frame\_data + frame\_offsets\[idx];
-    const uint8\_t \*end = src + frame\_lengths\[idx];
-    uint8\_t \*fb = OLED\_Framebuffer();
-    uint8\_t col = 0u, page = 0u;
-    while (src < end) {
-        uint8\_t count = \*src++;
-        uint8\_t value = \*src++;
-        do {
-            fb\[(uint16\_t)page \* 128u + col] = value;
-            if (++page == 8u) { page = 0u; ++col; }
-        } while (--count);
-    }
+const uint8\\\_t \\\*src = frame\\\_data + frame\\\_offsets\\\[idx];
+const uint8\\\_t \\\*end = src + frame\\\_lengths\\\[idx];
+uint8\\\_t \\\*fb = OLED\\\_Framebuffer();
+uint8\\\_t col = 0u, page = 0u;
+while (src < end) {
+uint8\\\_t count = \\\*src++;
+uint8\\\_t value = \\\*src++;
+do {
+fb\\\[(uint16\\\_t)page \\\* 128u + col] = value;
+if (++page == 8u) { page = 0u; ++col; }
+} while (--count);
 }
-```
+}
 
-Two memory accesses per output byte, no buffering, and the column-to-page transposition happens implicitly via the `(page, col)` cursor. The cost is one multiply per byte, which on the Cortex-M0 is a single-cycle `MULS`. This was the moment I realized the Cortex-M0's tiny multiplier was actually carrying the whole project.
+  ```
 
-### Stage 6 — Build budget
+  Two memory accesses per output byte, no buffering, and the column-to-page transposition happens implicitly via the `(page, col)` cursor. The cost is one multiply per byte, which on the Cortex-M0 is a single-cycle `MULS`. This was the moment I realized the Cortex-M0's tiny multiplier was actually carrying the whole project.
 
-The script accepts a `--budget` flag (default 48 KB). It greedily packs frames until the budget is exhausted, then stops and reports stats:
+  ### Stage 6 — Build budget
 
-```
-50 frames | 39214/49152 bytes (79%) | avg 784B/frame | 10.0s loop
-```
+  The script accepts a `--budget` flag (default 48 KB). It greedily packs frames until the budget is exhausted, then stops and reports stats:
 
-For my demo build: **50 frames at 5 fps = 10-second loop**, fitting comfortably alongside the firmware in the 64 KB total flash. The firmware itself is \~50 KB; the frame table is the dominant tenant of `.rodata`.
+  ```
 
-\---
+  50 frames | 39214/49152 bytes (79%) | avg 784B/frame | 10.0s loop
 
-## Step 5 — Putting it on the screen
+  ```
 
-The main loop is anticlimactic, which I think is the right ending:
+  For my demo build: \*\*50 frames at 5 fps = 10-second loop\*\*, fitting comfortably alongside the firmware in the 64 KB total flash. The firmware itself is \\\~50 KB; the frame table is the dominant tenant of `.rodata`.
 
-```c
+  \\---
+
+  ## Step 5 — Putting it on the screen
+
+  The main loop is anticlimactic, which I think is the right ending:
+
+  ```c
 int main(void)
 {
-    RCC\_AHBENR |= RCC\_AHBENR\_GPIOBEN;
+    RCC\\\\\\\_AHBENR |= RCC\\\\\\\_AHBENR\\\\\\\_GPIOBEN;
 
-    GPIO\_BSRR(GPIOB\_BASE) = (1u << OLED\_PIN\_PWR);   // PB14 HIGH first!
-    gpio\_output\_pushpull(GPIOB\_BASE, OLED\_PIN\_PWR);
+    GPIO\\\\\\\_BSRR(GPIOB\\\\\\\_BASE) = (1u << OLED\\\\\\\_PIN\\\\\\\_PWR);   // PB14 HIGH first!
+    gpio\\\\\\\_output\\\\\\\_pushpull(GPIOB\\\\\\\_BASE, OLED\\\\\\\_PIN\\\\\\\_PWR);
 
-    delay\_ms(1000);                                  // OLED rail stabilize
-    OLED\_Init();
+    delay\\\\\\\_ms(1000);                                  // OLED rail stabilize
+    OLED\\\\\\\_Init();
 
-    uint32\_t frame = 0u;
+    uint32\\\\\\\_t frame = 0u;
     while (1) {
-        DoomFrames\_Blit(frame);
-        OLED\_Update();
-        delay\_ms(1000u / DOOM\_FPS);
-        if (++frame >= DOOM\_FRAME\_COUNT) frame = 0u;
+        DoomFrames\\\\\\\_Blit(frame);
+        OLED\\\\\\\_Update();
+        delay\\\\\\\_ms(1000u / DOOM\\\\\\\_FPS);
+        if (++frame >= DOOM\\\\\\\_FRAME\\\\\\\_COUNT) frame = 0u;
     }
 }
 ```
 
-That is the whole device. Power on, raise PB14, init the OLED, then loop forever drawing pre-decompressed DOOM frames.
+  That is the whole device. Power on, raise PB14, init the OLED, then loop forever drawing pre-decompressed DOOM frames.
 
-\---
+  \---
 
-## Numbers
+  ## Numbers
 
 |Metric|Value|
 |-|-|
