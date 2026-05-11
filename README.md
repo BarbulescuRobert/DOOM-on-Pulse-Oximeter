@@ -6,11 +6,11 @@
 
 ---
 
-<video width="640" height="480" controls>
-
-&#x20; <source src="./img/video.mp4" type="video/mp4">
-
-</video>
+<div style="max-width: 640px;">
+  <video controls style="width: 100%; height: auto;">
+    <source src="./img/video.mp4" type="video/mp4">
+  </video>
+</div>
 
 ## Why I did this
 
