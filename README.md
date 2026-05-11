@@ -251,7 +251,6 @@ My original goal was to render DOOM live on the device. I quietly downgraded tha
 
 <img src="./img/img16.png" alt="drawing" height="400"/>
 
-
 The pipeline lives in `tools/video\\\\\\\_to\\\\\\\_frames.py`. It is a single script that goes from MP4 to a self-contained C file embedded in firmware. It has six stages.
 
 ### Stage 1 — Frame extraction
@@ -260,7 +259,7 @@ I invoke `ffmpeg` with a downscale + framerate filter:
 
 ```
 
- ffmpeg -i doom\\\_gameplay.mp4 -vf "fps=5,scale=128:64:flags=lanczos" frame\\\_%05d.png
+  ffmpeg -i doom\\\_gameplay.mp4 -vf "fps=5,scale=128:64:flags=lanczos" frame\\\_%05d.png
 
   ```
 
@@ -297,12 +296,12 @@ The SSD1306 stores its framebuffer as 8 horizontal "pages", each 128 bytes wide.
 
 But Bayer dithering produces *vertical* coherence: a single column of the source frame goes through a single column of the Bayer tile, and so within one column of the OLED, all 8 pages tend to share the same threshold and produce identical or near-identical bytes.
 
-So I emit in **column-major** order instead: `col0\\\\\\\\\\\\\\\_page0..7, col1\\\\\\\\\\\\\\\_page0..7, ..., col127\\\\\\\\\\\\\\\_page0..7`. Now the redundant bytes are adjacent in the stream, which matters enormously for the next stage.
+So I emit in **column-major** order instead: `col0\\\\\\\_page0..7, col1\\\\\\\_page0..7, ..., col127\\\\\\\_page0..7`. Now the redundant bytes are adjacent in the stream, which matters enormously for the next stage.
 
 ```python
 buf = bytearray(BYTES\\\\\\\_PER\\\\\\\_FRAME)
 for col in range(W):
-      buf\\\\\\\[col\\\\\\\*8 : col\\\\\\\*8+8] = page\\\\\\\_bytes\\\\\\\[:, col].tobytes()
+    buf\\\\\\\[col\\\\\\\*8 : col\\\\\\\*8+8] = page\\\\\\\_bytes\\\\\\\[:, col].tobytes()
 ```
 
 The firmware decompressor knows about this transposition and rearranges back into page-major layout while writing the framebuffer (see Stage 5).
@@ -316,7 +315,7 @@ def rle\\\\\\\_compress(data):
     out = bytearray()
     i = 0
     while i < len(data):
-        val = data\\\\\\\\\\\\\\\[i]
+        val = data\\\\\\\[i]
         run = 1
         while i + run < len(data) and data\\\\\\\[i + run] == val and run < 255:
             run += 1
@@ -335,7 +334,7 @@ Why RLE instead of a real compressor? Two reasons:
 
    ### Stage 5 — C emission
 
-    The script writes a single self-contained `src/doom\\\\\\\_frames.c` containing:
+   The script writes a single self-contained `src/doom\\\\\\\_frames.c` containing:
 
 * `frame\\\\\\\_data\\\\\\\[]` — concatenated RLE bytes for every frame
 * `frame\\\\\\\_offsets\\\\\\\[]` — where each frame starts
@@ -347,6 +346,10 @@ Why RLE instead of a real compressor? Two reasons:
 
   ```c
 void DoomFrames\\\\\\\_Blit(uint32\\\\\\\_t idx)
+
+
+
+  void DoomFrames\\\_Blit(uint32\\\_t idx)
 {
 const uint8\\\_t \\\*src = frame\\\_data + frame\\\_offsets\\\[idx];
 const uint8\\\_t \\\*end = src + frame\\\_lengths\\\[idx];
@@ -376,7 +379,7 @@ if (++page == 8u) { page = 0u; ++col; }
 
   ```
 
-For my demo build: \*\*50 frames at 5 fps = 10-second loop\*\*, fitting comfortably alongside the firmware in the 64 KB total flash. The firmware itself is \\\~50 KB; the frame table is the dominant tenant of `.rodata`.
+  For my demo build: \*\*50 frames at 5 fps = 10-second loop\*\*, fitting comfortably alongside the firmware in the 64 KB total flash. The firmware itself is \\\~50 KB; the frame table is the dominant tenant of `.rodata`.
 
   \\---
 
@@ -395,8 +398,8 @@ int main(void)
     delay\\\\\\\_ms(1000);                                  // OLED rail stabilize
     OLED\\\\\\\_Init();
 
-     uint32\\\\\\\_t frame = 0u;
-     while (1) {
+    uint32\\\\\\\_t frame = 0u;
+    while (1) {
         DoomFrames\\\\\\\_Blit(frame);
         OLED\\\\\\\_Update();
         delay\\\\\\\_ms(1000u / DOOM\\\\\\\_FPS);
@@ -432,4 +435,3 @@ This walkthrough has lots of different ways to repurpose a cheap medical gadget,
 If you have a drawer full of dead or unloved gadgets, my recommendation is to pick the one with the nicest screen and the most over-specced MCU, wipe it, and see what you can do. The hard parts — the booby-trapped power-enable pin, the always-selected SPI slave, the bit-banged clock — are also the parts that teach you the most.
 
 Source, captures, the video pipeline, and the firmware all live in this repository. Have fun.
-
