@@ -6,11 +6,9 @@
 
 ---
 
-<div style="max-width: 640px;">
-  <video controls style="width: 100%; height: auto;">
-    <source src="./img/video.mp4" type="video/mp4">
-  </video>
-</div>
+<video controls style="width: 100%; max-width: 640px; height: auto;">
+  <source src="./img/video.mp4" type="video/mp4">
+</video>
 
 ## Why I did this
 
