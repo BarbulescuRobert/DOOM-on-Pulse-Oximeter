@@ -88,7 +88,7 @@ After finding the power pins, the pins which configure the board into 4-wire SPI
 
 ### Logic-analyzer capture from a working unit
 
-With the backup device, I wired a logic analyzer to the suspect SPI pins on the MCU. I used the [Saleae Logic 8](https://www.saleae.com/products/logic-8) logic analyzer onto the suspected GPIOs and let the original firmware run a normal pulse-ox measurement.
+With the backup device, I wired a logic analyzer to the suspect SPI pins on the MCU. I used the [Saleae Logic 8](https://www.saleae.com/) logic analyzer onto the suspected GPIOs and let the original firmware run a normal pulse-ox measurement.
 
 <img src="./img/img12.jpeg" alt="drawing" height="500"/>
 
